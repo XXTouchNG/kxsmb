@@ -7,7 +7,7 @@
 #
 
 #
-# Copyright (c) 2013 Konstantin Bukreev All rights reserved.
+# copyright (c) 2013 Konstantin Bukreev All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -37,9 +37,9 @@ require "fileutils"
 # utils
 
 def system_or_exit(cmd, stdout = nil)
-  puts "Executing #{cmd}"
+  puts "executing #{cmd}"
   cmd += " >#{stdout}" if stdout
-  system(cmd) or raise "******** Build failed ********"
+  system(cmd) or raise "******** build failed ********"
 end
 
 def copyIfNotExists(file, from, to)
@@ -72,7 +72,7 @@ end
 
 # versions
 
-IOS_MIN_VERSION='8.0'
+IOS_MIN_VERSION='11.0'
 SAMBA_VERSION='4.0.26'
 
 # samba source
@@ -92,25 +92,13 @@ EXT_INCLUDE_PATH='tmp/include'
 
 # configure arguments
 
-CF_FLAGS='-pipe -Wno-trigraphs -fpascal-strings -Os -fembed-bitcode -g'
+CF_FLAGS='-pipe -Wno-trigraphs -fpascal-strings -Os -g'
 
 IOS_CF_FLAGS='-ftree-vectorize'
 IOS_LD_FLAGS=''
 
-ARM7_CF_FLAGS="-arch armv7 -mcpu=cortex-a8 -mfpu=neon #{IOS_CF_FLAGS} #{CF_FLAGS}"
-ARM7_LD_FLAGS="-arch armv7 #{IOS_LD_FLAGS}"
-
-ARM7s_CF_FLAGS="-arch armv7s -mcpu=cortex-a8 -mfpu=neon #{IOS_CF_FLAGS} #{CF_FLAGS}"
-ARM7s_LD_FLAGS="-arch armv7s #{IOS_LD_FLAGS}"
-
 ARM64_CF_FLAGS="-arch arm64 -Wno-error=implicit-function-declaration #{IOS_CF_FLAGS} #{CF_FLAGS}"
 ARM64_LD_FLAGS="-arch arm64 #{IOS_LD_FLAGS}"
-
-I386_CF_FLAGS="-arch i386 #{CF_FLAGS}"
-I386_LD_FLAGS='-arch i386'
-
-X86_64_CF_FLAGS="-arch x86_64 -Wno-error=implicit-function-declaration #{CF_FLAGS}"
-X86_64_LD_FLAGS='-arch x86_64'
 
 SMB_ARGS = [
 '--prefix=/private',
@@ -129,11 +117,6 @@ SMB_ARGS = [
 'samba_cv_CC_NEGATIVE_ENUM_VALUES=yes',
 ]
 
-SIM_SMB_ARGS = [
-'--enable-debug',
-'samba_cv_HAVE_FCNTL_LOCK=yes'
-]
-
 IOS_SMB_ARGS = [
 'ac_cv_header_libunwind_h=no',
 'ac_cv_header_execinfo_h=no',
@@ -146,24 +129,8 @@ IOS_SMB_ARGS = [
 'samba_cv_little_endian=yes',
 ]
 
-ARM7_SMB_ARGS = [
-'--host=arm-apple-darwin',
-]
-
-ARM7s_SMB_ARGS = [
-'--host=arm-apple-darwin',
-]
-
 ARM64_SMB_ARGS = [
 '--host=arm-apple-darwin',
-]
-
-I386_SMB_ARGS = [
-'--host=i686-apple-darwin',
-]
-
-X86_64_SMB_ARGS = [
-'--host=x86_64-apple-darwin',
 ]
 
 # libs
@@ -174,6 +141,7 @@ SMB_LIBS = [
 'libtevent',
 'libtdb',
 'libwbclient',
+'bin/smbclient',
 ]
 
 # functions
@@ -196,18 +164,10 @@ end
 def buildArch(arch)
 
 	case arch
-	when 'i386'
-		args = mkArgs(SIM_SDK_PATH, SIM_SMB_ARGS, I386_SMB_ARGS, I386_CF_FLAGS, I386_LD_FLAGS)
-	when 'armv7'
-		args = mkArgs(IOS_SDK_PATH, IOS_SMB_ARGS, ARM7_SMB_ARGS, ARM7_CF_FLAGS, ARM7_LD_FLAGS)
-	when 'armv7s'	
-		args = mkArgs(IOS_SDK_PATH, IOS_SMB_ARGS, ARM7s_SMB_ARGS, ARM7s_CF_FLAGS, ARM7s_LD_FLAGS)
 	when 'arm64'	
 		args = mkArgs(IOS_SDK_PATH, IOS_SMB_ARGS, ARM64_SMB_ARGS, ARM64_CF_FLAGS, ARM64_LD_FLAGS)
-	when 'x86_64'
-		args = mkArgs(SIM_SDK_PATH, SIM_SMB_ARGS, X86_64_SMB_ARGS, X86_64_CF_FLAGS, X86_64_LD_FLAGS)
 	else
-		raise "Build failed: unknown arch: #{arch}"
+		raise "build failed: unknown arch: #{arch}"
 	end
 	
 	p args
@@ -219,14 +179,15 @@ def buildArch(arch)
 		system_or_exit "cd #{SAMBA_SOURCE_PATH}; make #{x}"		
 	end	
 
-	dest = Pathname.new("#{SAMBA_SOURCE_PATH}/bin/#{arch}")	
-	cleanOrMkDir(dest)
+	# dest = Pathname.new("#{SAMBA_SOURCE_PATH}/bin/#{arch}")	
+	# cleanOrMkDir(dest)
 
-	SMB_LIBS.each do |x|
-		FileUtils.move Pathname.new("#{SAMBA_SOURCE_PATH}/bin/#{x}.a"), dest		
-	end
+	# SMB_LIBS.each do |x|
+	# 	FileUtils.move Pathname.new("#{SAMBA_SOURCE_PATH}/bin/#{x}.a"), dest		
+	# end
 
-	system_or_exit "cd #{SAMBA_SOURCE_PATH}; make clean"
+	# system_or_exit "cd #{SAMBA_SOURCE_PATH}; make clean"
+
 end
 
 def checkExtInclude
@@ -237,93 +198,20 @@ end
 
 # tasks
 
-desc "Build smb armv7 libs"
-task :build_smb_armv7 do
-	checkExtInclude	
-	buildArch('armv7')	
-end
-
-desc "Build smb armv7s libs"
-task :build_smb_armv7s do
-	checkExtInclude	
-	buildArch('armv7s')	
-end
-
-desc "Build smb arm64 libs"
+desc "build smb arm64 libs"
 task :build_smb_arm64 do
 	checkExtInclude	
 	buildArch('arm64')	
 end
 
-desc "Build smb i386 libs"
-task :build_smb_i386 do	
-	buildArch('i386')	
-end
-
-desc "Build smb x86_64 libs"
-task :build_smb_x86_64 do	
-	buildArch('x86_64')	
-end
-
-desc "Build smb universal libs (full)"
-task :build_smb_universal_full do	
-	
-	dest = Pathname.new("#{SAMBA_SOURCE_PATH}/bin/universal")
-	dest.mkdir unless dest.exist?
-
-	SMB_LIBS.each do |x|
-		args = "-create -arch armv7 #{SAMBA_SOURCE_PATH}/bin/armv7/#{x}.a -arch armv7s #{SAMBA_SOURCE_PATH}/bin/armv7s/#{x}.a -arch arm64 #{SAMBA_SOURCE_PATH}/bin/arm64/#{x}.a -arch i386 #{SAMBA_SOURCE_PATH}/bin/i386/#{x}.a -arch x86_64 #{SAMBA_SOURCE_PATH}/bin/x86_64/#{x}.a -output #{dest}/#{x}.a"
-		system_or_exit "xcrun lipo #{args}"
-	end	
-end
-
-desc "Build smb universal libs"
-task :build_smb_universal do	
-	
-	dest = Pathname.new("#{SAMBA_SOURCE_PATH}/bin/universal")
-	dest.mkdir unless dest.exist?
-
-	SMB_LIBS.each do |x|
-		args = "-create -arch armv7 #{SAMBA_SOURCE_PATH}/bin/armv7/#{x}.a -arch arm64 #{SAMBA_SOURCE_PATH}/bin/arm64/#{x}.a -arch i386 #{SAMBA_SOURCE_PATH}/bin/i386/#{x}.a -arch x86_64 #{SAMBA_SOURCE_PATH}/bin/x86_64/#{x}.a -output #{dest}/#{x}.a"
-		system_or_exit "xcrun lipo #{args}"
-	end	
-end
-
-desc "Copy smb headers"
-task :copy_headers do		
-	copyIfNotExists('libsmbclient.h', "#{SAMBA_SOURCE_PATH}/include/", 'libs')
-	copyIfNotExists('talloc.h', "#{SAMBA_FOLDER}/lib/talloc/", 'libs')
-	copyIfNotExists('talloc_stack.h', "#{SAMBA_FOLDER}/lib/util/", 'libs')
-end	
-
-desc "Copy smb libs"
-task :copy_libs do		
-	
-	dest = Pathname.new('libs')
-	dest.mkdir unless dest.exist?
-
-	from = Pathname.new("#{SAMBA_SOURCE_PATH}/bin/universal")
-
-	SMB_LIBS.each do |x|
-		source = from + "#{x}.a"
-		FileUtils.move source, dest	
-		p "copy #{source} -> #{dest}"
-	end
-end	
-
-desc "Clean"
+desc "clean"
 task :clean do
-	cleanDir("#{SAMBA_SOURCE_PATH}/bin/armv7")
-	cleanDir("#{SAMBA_SOURCE_PATH}/bin/armv7s")
 	cleanDir("#{SAMBA_SOURCE_PATH}/bin/arm64")
-	cleanDir("#{SAMBA_SOURCE_PATH}/bin/i386")
-	cleanDir("#{SAMBA_SOURCE_PATH}/bin/x86_64")	
-	cleanDir("#{SAMBA_SOURCE_PATH}/bin/universal")	
 
 	system_or_exit "cd #{SAMBA_SOURCE_PATH}; make clean"	
 end
 
-desc "Retrieve samble archive"
+desc "retrieve samba archive"
 task :retrieve_samba do
 
 	p = Pathname.new "#{SAMBA_SOURCE_PATH}"
@@ -345,6 +233,6 @@ task :retrieve_samba do
 
 end
 
-task :build_full => [:retrieve_samba, :build_smb_armv7, :build_smb_armv7s, :build_smb_arm64, :build_smb_i386, :build_smb_x86_64, :build_smb_universal_full, :copy_libs, :copy_headers] 
-task :build_all => [:retrieve_samba, :build_smb_armv7, :build_smb_arm64, :build_smb_i386, :build_smb_x86_64, :build_smb_universal, :copy_libs, :copy_headers] 
+task :build_all => [:retrieve_samba, :build_smb_arm64]
 task :default => [:build_all]
+
