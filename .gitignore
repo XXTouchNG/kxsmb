@@ -23,7 +23,5 @@ project.xcworkspace
 ## my
 tmp/*
 libs/*
-samba/*
+samba-*/*
 plan
-
-
